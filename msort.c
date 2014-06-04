@@ -43,7 +43,7 @@ int main( int argc, char** argv )
 
     int qtdCorridas=0,count =0;
     long int endOfFile=0,pointerFile=0;
-    char fileTempName[25];
+    char fileTempName[15];
 
     // Abre arquivo de entrada para geracao das corridas
     pFile = fopen(fileIn,"r");
@@ -90,9 +90,10 @@ int main( int argc, char** argv )
      // Passo 5: Fechar arquivo de saida gerando uma nova corrida com tamanho kvias vezes maior.
      // Passo 6: Repetir passo 1 a 5 ate sobrar apenas um arquivo.
 
-    int **V,*I,tamBuffer,qtdBuffers,i,j,x,y,minX,minY;
+    int **V,*I,tamBuffer,qtdBuffers,i,j,x,y,z,minX,minY;
 
-    FILE *fSorted;
+    FILE *fSorted, **fBuffer;
+    char **fileNames;
 
     qtdBuffers = kVias +1;
     /* Tamanho de cada uma das k vias */
@@ -105,14 +106,38 @@ int main( int argc, char** argv )
     }
 
     I = (int *) malloc(kVias*sizeof(int));
+
+    fileNames = (char **)malloc(kVias*sizeof(char*));
     for(i=0;i<kVias;i++)
     {
-	I[i] = 0;
+	I[i] = 0; 
+	fileNames[i] = (char **) malloc(15*sizeof(char*);
     }
 
+    fBuffer = (FILE **) malloc(kVias*sizeof(FILE *));
+
+    z = 0;
     while(1)
     {
 	// carrega buffers
+	for(y=0;y<kVias)
+	{
+	    if(fBuffer[y]==null || feof(fBuffer[y]))
+	    {
+		//leNovoArquivo de corridas e carrega no buffer de memoria
+		sprintd(fileNames[y],"%d.tmp",y);
+		fBuffer[y] = fopen(fileNames[y],"r");
+		load("trocar-este-nome",V[y],tamBuffer,fBuffer[y]);
+	    } else {
+		if(I[y]>=tamBuffer)
+		{
+		    // carrega novos dados a um buffer que jah foi todo consumido pela
+		    // intercalacao e zera o indice deste buffer
+	    	    load("trocar-este-nome",V[y],tamBuffer,fBuffer[y]);
+		    I[y] = 0;
+		}
+	    }
+	}
 
 	// intercala
 	for(y=0;y<kVias*tamBuffer;y++)
@@ -135,6 +160,7 @@ int main( int argc, char** argv )
 
 	// grava
 	write(V[kVias],tamBuffer,"nome-provisorio");
+
     }
 
 }
