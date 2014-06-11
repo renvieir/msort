@@ -6,7 +6,7 @@ void verificaParametros(int argc);
 int load(int *V,int num,FILE *pFile);
 int write(int *V,int num, char *fileName);
 void quicksort(int* V,int ini, int fim);
-
+int fimArquivos(FILE **fBuffer, int numBuffers);
 void print(int *V, int n)
 {
     int i;
@@ -54,7 +54,6 @@ int main( int argc, char** argv )
     /*
      *  Etapa 1: geracao de corridas.
      */
-
     printf("------> Iniciando geracao de corridas ...\n");
     int *buffer,qtdElementos,tamElemento;
 
@@ -115,7 +114,7 @@ int main( int argc, char** argv )
      // Passo 5: Fechar arquivo de saida gerando uma nova corrida com tamanho kvias vezes maior.
      // Passo 6: Repetir passo 1 a 5 ate sobrar apenas um arquivo.
 
-    int **V,*I,tamBuffer,qtdBuffers,i,j,x,y,fileCount,minX,minY;
+    int **V,*I,tamBuffer,qtdBuffers,i,j,x,y,corridaCont,minX,minY;
 
     FILE *fSorted, **fBuffer;
     char **fileNames;
@@ -125,106 +124,128 @@ int main( int argc, char** argv )
     tamBuffer = memoria/qtdBuffers;
 
     V = (int **) malloc(qtdBuffers*sizeof(int *));
+    fileNames = (char **)malloc(kVias*sizeof(char*));
+    I = (int *) malloc(kVias*sizeof(int));
+    fBuffer = (FILE **) malloc(kVias*sizeof(FILE *));
+
     /* Alocacao dos buffers para intercalacao */
     for(i=0;i<qtdBuffers;i++)
     {
         V[i] = (int *) malloc(tamBuffer*sizeof(int));
+
+        // estruturas auxiliares
+        if(i<qtdBuffers-1)
+        {
+            I[i] = 0;
+            fileNames[i] = (char *) malloc(15*sizeof(char));
+        }
     }
 
-    I = (int *) malloc(kVias*sizeof(int));
+    // contador de corridas lidas
+    corridaCont = 0;
 
-    fileNames = (char **)malloc(kVias*sizeof(char*));
-    for(i=0;i<kVias;i++)
+    // esquanto houver corridas nao lidas
+    while(corridaCont < qtdCorridas)
     {
-	I[i] = 0; 
-	fileNames[i] = (char *) malloc(15*sizeof(char));
+        printf("\n corridaCont %d qtdCorridas %d\n",corridaCont,qtdCorridas);
+
+        // carrega novos buffers
+        for(y=0;y<kVias;y++)
+        {
+            // So carrega novo arquivo quando todos os arquivos tiverem sido lidos por completo
+            // ou no inicio do loop
+            if(indicesZerados(I,kVias) || indicesTerminados(I,kVias, tamBuffer))
+            {
+                //printf("\nErro aqui 1\n");
+                //leNovoArquivo de corridas e carrega no buffer de memoria
+
+                //if(corridaCont < qtdCorridas){
+
+                // fecha o arquivo atual antes de abrir outro arquivo
+                fclose(fBuffer[y]);
+
+                sprintf(fileNames[y],"%d.tmp",corridaCont);
+                fBuffer[y] = fopen(fileNames[y],"r");
+                load(V[y],tamBuffer,fBuffer[y]);
+                I[y]=0;
+                //}
+                /*else {
+                    fBuffer[y] = NULL;
+                    I[y] = tamBuffer;
+                }*/
+
+                // incrementa contador de corridas lidas
+                corridaCont++;
+            }
+        }
+
+        // intercala todos os elementos dos kVias arquivos
+        //for(y=0;y<kVias*tamBuffer;y++)
+        y=0;
+        while(!fimArquivos(fBuffer,kVias))
+        {
+            // indice do menor numero
+            minX = 0;
+            minY = 0;
+
+            // comparação das kVias
+            for(x=0;x<kVias;x++)
+            {
+            // se jah consumiu todo o buffer e o arquivo ainda nao acabou
+            // entao carrega mais dados pro buffer
+
+            //printf("x=%d => indice:%d, tamBufer:%d\n",x,I[x],tamBuffer);
+
+                // leitura de buffer que jah foi consumido
+                if(I[x]>=tamBuffer && !feof(fBuffer[x]))
+                {
+                    load(V[x],tamBuffer,fBuffer[x]);
+                    I[x]=0;
+                }
+
+                // acha o menor somente entre aqueles que nao atingiram o fim do arquivo
+                if(I[x] < tamBuffer)
+                {
+                    if(V[x,I[x]]<V[minX,minY])
+                    {
+                        minX = x;
+                        minY = I[x];
+                    }
+                }
+            }
+
+            // preenche a saida com o menor
+            V[kVias,y%tamBuffer] = V[minX,minY];
+
+            // anda o indice do buffer que continha o menor valor
+            I[minX] = I[minX] + 1;
+
+            // grava o arquivo quando enche o buffer
+            if(y>0 && y%(tamBuffer)==0)
+            {
+                sprintf(fileTempName,"%d.tmp",qtdCorridas);
+                write(V[kVias],tamBuffer,fileTempName);
+            }
+            y++;
+
+            printf("\t--- arquivosLidos: %d arquivosTotal: %d\n",corridaCont,qtdCorridas);
+        }
+
+        qtdCorridas++;
+
     }
 
-    fBuffer = (FILE **) malloc(kVias*sizeof(FILE *));
+}
 
-    fileCount = 0;
-    while(fileCount < qtdCorridas)
+int fimArquivos(FILE **fBuffer, int numBuffers)
+{
+    int i;
+    for (i=0;i<numBuffers;i++)
     {
-	printf("\n fileCount %d qtdCorridas %d\n",fileCount,qtdCorridas);
-	// carrega novos buffers
-	for(y=0;y<kVias;y++)
-	{
-	    // So carrega novo arquivo quando todos os arquivos tiverem sido lidos por completo
-	    // ou no inicio do loop
-	    if(indicesZerados(I,kVias) || indicesTerminados(I,kVias, tamBuffer))
-	    {
-		//printf("\nErro aqui 1\n");
-		//leNovoArquivo de corridas e carrega no buffer de memoria
-
-		if(fileCount < qtdCorridas)
-		{
-		    sprintf(fileNames[y],"%d.tmp",fileCount);
-		    fBuffer[y] = fopen(fileNames[y],"r");
-		    load(V[y],tamBuffer,fBuffer[y]);
-		    I[y]=0;
-		} else {
-		    fBuffer[y] = NULL;
-		    I[y] = tamBuffer;
-		}
-		fileCount++;
-	    }
-	}
-
-	// intercala todos os elementos
-	for(y=0;y<kVias*tamBuffer;y++)
-	{
-	    minX = 0;
-	    minY = 0;
-
-	    // compara as kVias
-	    for(x=0;x<kVias;x++)
-	    {
-		// se jah consumiu todo o buffer e o arquivo ainda nao acabou
-		// entao carrega mais dados pro buffer
-
-		//printf("x=%d => indice:%d, tamBufer:%d\n",x,I[x],tamBuffer);
-
-		if(I[x]>=tamBuffer && !feof(fBuffer[x]))
-		{
-		    load(V[x],tamBuffer,fBuffer[x]);
-		    I[x]=0;
-		}
-
-		if(I[x] < tamBuffer)
-		{
-		    // acha o menor
-		    if(V[x,I[x]]<V[minX,minY])
-		    {
-		        minX = x;
-		        minY = I[x];
-		    }
-		}
-	    }
-
-	    // preenche a saida com o menor
-	    V[kVias,y%tamBuffer] = V[minX,minY];
-
-	    // anda o indice do buffer que continha o menor valor
-	    I[minX] = I[minX] + 1;
-
-	    // a cada tamBuffer vezes grava o arquivo
-	    if(y>0 && y%(tamBuffer-1)==0)
-	    {
-		sprintf(fileTempName,"%d.tmp",qtdCorridas);
-		write(V[kVias],tamBuffer,fileTempName);
-	    }
-	}
-
-	// incrementa qtdCorridas a cada kVias iteracoes de fileCount
-	// ou seja, soh grava depois que consumir os kVias arquivos de entrada
-	if(fileCount%kVias==0)
-	{
-	    qtdCorridas++;
-	}
-
-	printf("\t--- arquivosLidos: %d arquivosTotal: %d\n",fileCount,qtdCorridas);
+        if(!feof(fBuffer[i]))
+            return 0;
     }
-
+    return 1;
 }
 
 void verificaParametros(int argc)
